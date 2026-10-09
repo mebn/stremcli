@@ -25,7 +25,7 @@ find_existing() {
 install_with_go() {
 	command -v go >/dev/null 2>&1 || return 1
 	log "Installing stremcli with go install..."
-	go install "github.com/$REPO/cmd/stremcli@latest" >&2 || return 1
+	go install "github.com/$REPO@latest" >&2 || return 1
 	gobin="$(go env GOBIN)"
 	[ -n "$gobin" ] || gobin="$(go env GOPATH)/bin"
 	echo "$gobin/stremcli"
@@ -64,5 +64,5 @@ if path="$(install_with_go)" || path="$(install_release)"; then
 fi
 
 log "Could not install stremcli. Install Go (https://go.dev/dl) and run:"
-log "  go install github.com/$REPO/cmd/stremcli@latest"
+log "  go install github.com/$REPO@latest"
 exit 1

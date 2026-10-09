@@ -10,7 +10,7 @@ to the first one that's cached.
 ## Install
 
 ```sh
-go install github.com/mebn/stremcli/cmd/stremcli@latest
+go install github.com/mebn/stremcli@latest
 ```
 
 or download a binary from the [latest release](https://github.com/mebn/stremcli/releases/latest).
