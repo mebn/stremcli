@@ -42,13 +42,5 @@ func (a *App) runUpdate(ctx context.Context, args []string) error {
 		return err
 	}
 	fmt.Fprintf(a.Err, "Installed %s\n", path)
-
-	for _, dir := range update.SkillDirs() {
-		if err := update.InstallSkill(ctx, dl, latest, dir); err != nil {
-			fmt.Fprintf(a.Err, "warning: could not update skill in %s: %v\n", dir, err)
-			continue
-		}
-		fmt.Fprintf(a.Err, "Updated skill in %s\n", dir)
-	}
 	return nil
 }

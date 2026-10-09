@@ -2,7 +2,6 @@
 package media
 
 import (
-	"cmp"
 	"fmt"
 	"strings"
 )
@@ -50,12 +49,4 @@ type Episode struct {
 
 func (e Episode) String() string {
 	return fmt.Sprintf("S%02dE%02d", e.Season, e.Number)
-}
-
-// Compare orders episodes by season, then episode number.
-func (e Episode) Compare(o Episode) int {
-	if c := cmp.Compare(e.Season, o.Season); c != 0 {
-		return c
-	}
-	return cmp.Compare(e.Number, o.Number)
 }

@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/mebn/stremcli/internal/history"
-	"github.com/mebn/stremcli/internal/media"
-	"github.com/mebn/stremcli/internal/progress"
 )
 
 func (a *App) runHistory(args []string) error {
@@ -31,30 +29,9 @@ func (a *App) runHistory(args []string) error {
 	if limit > 0 && len(entries) > limit {
 		entries = entries[len(entries)-limit:]
 	}
-	saved, err := progress.Load()
-	if err != nil {
-		fmt.Fprintf(a.Err, "warning: %v\n", err)
-	}
-
 	// Most recent first.
 	for i := len(entries) - 1; i >= 0; i-- {
-		e := entries[i]
-		line := e.String()
-		var ep *media.Episode
-		if e.Kind == media.Series {
-			ep = &media.Episode{Season: e.Season, Number: e.Episode}
-		}
-		if p, ok := saved[progress.Key(e.IMDbID, ep)]; ok {
-			switch {
-			case p.Finished:
-				line += "  [finished]"
-			case p.Duration > 0:
-				line += fmt.Sprintf("  [%s / %s]", progress.FormatTime(p.Position), progress.FormatTime(p.Duration))
-			default:
-				line += fmt.Sprintf("  [%s]", progress.FormatTime(p.Position))
-			}
-		}
-		fmt.Fprintln(a.Out, line)
+		fmt.Fprintln(a.Out, entries[i])
 	}
 	return nil
 }

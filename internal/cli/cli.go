@@ -19,9 +19,8 @@ Usage:
   stremcli [flags] <title>          find a stream and play it
   stremcli config [-token KEY] [-player NAME] [-quality Q]
                                     save settings to ~/.stremcli/config.json
-  stremcli continue [flags] [show]  play the next episode of the last show
-                                    watched (or of the named show)
-  stremcli history [-n N]           show watch history
+  stremcli history [-n N]           show watch history, with how far each
+                                    item got (IINA and mpv only)
   stremcli update [-check]          update to the latest release
   stremcli version                  print the installed version
 
@@ -34,6 +33,7 @@ Play flags:
                 (without it, the configured quality is tried first)
   -list, -l     list numbered results instead of playing
   -pick N       use result number N from -list (no fallback to other results)
+  -start T      start at T, e.g. 1:23:45 or 5025 (seconds; IINA and mpv only)
 
 The Real-Debrid token is read from $REAL_DEBRID_TOKEN, falling back to the
 saved config. Get yours at https://real-debrid.com/apitoken.
@@ -44,8 +44,7 @@ Examples:
   stremcli -t tv -s 1 -e 3 -p vlc "Breaking Bad"
   stremcli -q 1080p -l "Dune"
   stremcli -q 1080p -pick 2 -p iina "Dune"
-  stremcli continue
-  stremcli continue mobland
+  stremcli -t tv -s 1 -e 3 -start 23:10 -p iina "Breaking Bad"
 `
 
 // App holds the I/O streams and shared dependencies for commands.
@@ -54,8 +53,6 @@ type App struct {
 	Out  io.Writer // results (e.g. the stream link)
 	Err  io.Writer // progress and diagnostics
 	HTTP *http.Client
-
-	lines chan readResult // lazily started reader of In, see prompt
 }
 
 // New returns an App using the given streams.
@@ -74,8 +71,6 @@ func (a *App) Run(ctx context.Context, args []string) error {
 		switch args[0] {
 		case "config":
 			return a.runConfig(ctx, args[1:])
-		case "continue":
-			return a.runContinue(ctx, args[1:])
 		case trackCommand:
 			return a.runTrack(ctx, args[1:])
 		case "update":

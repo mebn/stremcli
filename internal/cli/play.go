@@ -3,9 +3,9 @@ package cli
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/mebn/stremcli/internal/catalog"
@@ -13,7 +13,6 @@ import (
 	"github.com/mebn/stremcli/internal/history"
 	"github.com/mebn/stremcli/internal/media"
 	"github.com/mebn/stremcli/internal/player"
-	"github.com/mebn/stremcli/internal/progress"
 	"github.com/mebn/stremcli/internal/realdebrid"
 	"github.com/mebn/stremcli/internal/torrentio"
 )
@@ -29,9 +28,10 @@ type playOptions struct {
 	playerName string // empty means just print the link
 	player     player.Player
 	query      string
-	quality    string // empty means any quality
-	pick       int    // 1-based result to use; 0 means first cached
-	list       bool   // list results instead of playing
+	quality    string  // empty means any quality
+	pick       int     // 1-based result to use; 0 means first cached
+	list       bool    // list results instead of playing
+	start      float64 // seconds into the video to start at
 }
 
 func (a *App) runPlay(ctx context.Context, args []string) error {
@@ -39,7 +39,6 @@ func (a *App) runPlay(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-
 	opts, err := a.parsePlayOptions(args, cfg)
 	if err != nil {
 		return err
@@ -49,11 +48,6 @@ func (a *App) runPlay(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	return a.play(ctx, cfg, opts, title)
-}
-
-// play finds a stream for title and opens it according to opts.
-func (a *App) play(ctx context.Context, cfg config.Config, opts playOptions, title media.Title) error {
 	label := title.String()
 	if opts.episode != nil {
 		label += " " + opts.episode.String()
@@ -98,89 +92,27 @@ func (a *App) play(ctx context.Context, cfg config.Config, opts playOptions, tit
 	if err != nil {
 		return err
 	}
-
 	fmt.Fprintln(a.Out, link)
-
-	if opts.playerName != "" {
-		if err := a.launch(opts, progress.Key(title.IMDbID, opts.episode), link); err != nil {
-			return err
-		}
-	}
 
 	entry := history.NewEntry(title, opts.episode, opts.playerName, stream.Label())
 	if err := history.Append(entry); err != nil {
 		fmt.Fprintf(a.Err, "warning: could not save history: %v\n", err)
 	}
-	return nil
-}
 
-// streamFlags are the flags shared by play and continue.
-type streamFlags struct {
-	playerName, quality string
-	pick                int
-	list                bool
-}
-
-func (f *streamFlags) register(fs *flag.FlagSet, cfg config.Config) {
-	for _, name := range []string{"player", "p"} {
-		fs.StringVar(&f.playerName, name, cfg.Player, "player to open the stream in")
+	if opts.playerName == "" {
+		return nil
 	}
-	for _, name := range []string{"quality", "q"} {
-		fs.StringVar(&f.quality, name, "", "only use results of this quality")
-	}
-	fs.IntVar(&f.pick, "pick", 0, "use this result number (see -list)")
-	for _, name := range []string{"list", "l"} {
-		fs.BoolVar(&f.list, name, false, "list results instead of playing")
-	}
-}
-
-// options validates the flags and turns them into playOptions.
-func (f *streamFlags) options() (playOptions, error) {
-	opts := playOptions{
-		playerName: strings.ToLower(f.playerName),
-		quality:    f.quality,
-		pick:       f.pick,
-		list:       f.list,
-	}
-	if opts.playerName != "" {
-		var err error
-		if opts.player, err = player.Lookup(opts.playerName); err != nil {
-			return opts, err
-		}
-	}
-	if f.pick < 0 {
-		return opts, errors.New("-pick must be >= 1")
-	}
-	if f.quality != "" && !validQualities[torrentio.NormalizeQuality(f.quality)] {
-		return opts, fmt.Errorf("unknown quality %q (want 4k, 1080p, 720p or 480p)", f.quality)
-	}
-	return opts, nil
-}
-
-// launch opens link in the chosen player, resuming from saved progress and
-// recording new progress in the background when the player supports it.
-func (a *App) launch(opts playOptions, key, link string) error {
-	var po player.Options
+	po := player.Options{Start: opts.start}
 	if opts.player.CanTrack() {
-		saved, ok, err := progress.Get(key)
-		if err != nil {
-			fmt.Fprintf(a.Err, "warning: %v\n", err)
-		}
-		if ok && saved.Resumable() {
-			// Back up a little to pick up the thread.
-			po.Start = max(saved.Position-5, 0)
-			fmt.Fprintf(a.Err, "Resuming at %s\n", progress.FormatTime(po.Start))
-		}
 		po.Socket = newSocketPath()
 	}
-
 	fmt.Fprintf(a.Err, "Opening in %s\n", opts.playerName)
 	if err := opts.player.Play(link, po); err != nil {
 		return err
 	}
 	if po.Socket != "" {
-		if err := startTracker(po.Socket, key); err != nil {
-			fmt.Fprintf(a.Err, "warning: can't track progress: %v\n", err)
+		if err := startTracker(po.Socket, entry.WatchedAt); err != nil {
+			fmt.Fprintf(a.Err, "warning: can't track position: %v\n", err)
 		}
 	}
 	return nil
@@ -188,9 +120,9 @@ func (a *App) launch(opts playOptions, key, link string) error {
 
 func (a *App) parsePlayOptions(args []string, cfg config.Config) (playOptions, error) {
 	var (
-		kindStr         string
-		season, episode int
-		sf              streamFlags
+		kindStr, playerName, quality, start string
+		season, episode, pick               int
+		list                                bool
 	)
 	fs := a.newFlagSet("stremcli")
 	for _, name := range []string{"type", "t"} {
@@ -202,7 +134,17 @@ func (a *App) parsePlayOptions(args []string, cfg config.Config) (playOptions, e
 	for _, name := range []string{"episode", "e"} {
 		fs.IntVar(&episode, name, 0, "episode number")
 	}
-	sf.register(fs, cfg)
+	for _, name := range []string{"player", "p"} {
+		fs.StringVar(&playerName, name, cfg.Player, "player to open the stream in")
+	}
+	for _, name := range []string{"quality", "q"} {
+		fs.StringVar(&quality, name, "", "only use results of this quality")
+	}
+	fs.IntVar(&pick, "pick", 0, "use this result number (see -list)")
+	for _, name := range []string{"list", "l"} {
+		fs.BoolVar(&list, name, false, "list results instead of playing")
+	}
+	fs.StringVar(&start, "start", "", "start position, e.g. 1:23:45 or 5025 (seconds)")
 
 	positional, err := parseInterspersed(fs, args)
 	if err != nil {
@@ -212,13 +154,31 @@ func (a *App) parsePlayOptions(args []string, cfg config.Config) (playOptions, e
 		return playOptions{}, fmt.Errorf("%w\n\n%s", err, usage)
 	}
 
-	opts, err := sf.options()
-	if err != nil {
-		return opts, err
+	opts := playOptions{
+		playerName: strings.ToLower(playerName),
+		query:      strings.Join(positional, " "),
+		quality:    quality,
+		pick:       pick,
+		list:       list,
 	}
-	opts.query = strings.Join(positional, " ")
 	if opts.query == "" {
 		return opts, fmt.Errorf("missing title\n\n%s", usage)
+	}
+	if opts.playerName != "" {
+		if opts.player, err = player.Lookup(opts.playerName); err != nil {
+			return opts, err
+		}
+	}
+	if pick < 0 {
+		return opts, errors.New("-pick must be >= 1")
+	}
+	if quality != "" && !validQualities[torrentio.NormalizeQuality(quality)] {
+		return opts, fmt.Errorf("unknown quality %q (want 4k, 1080p, 720p or 480p)", quality)
+	}
+	if start != "" {
+		if opts.start, err = parseTime(start); err != nil {
+			return opts, err
+		}
 	}
 	if opts.kind, err = media.ParseKind(kindStr); err != nil {
 		return opts, err
@@ -236,6 +196,19 @@ func (a *App) parsePlayOptions(args []string, cfg config.Config) (playOptions, e
 		}
 	}
 	return opts, nil
+}
+
+// parseTime parses seconds ("5025") or h:mm:ss / m:ss ("1:23:45", "83:45").
+func parseTime(s string) (float64, error) {
+	var sec float64
+	for _, part := range strings.Split(s, ":") {
+		n, err := strconv.ParseFloat(part, 64)
+		if err != nil || n < 0 {
+			return 0, fmt.Errorf("invalid -start %q (want seconds or h:mm:ss)", s)
+		}
+		sec = sec*60 + n
+	}
+	return sec, nil
 }
 
 // resolveFirst tries streams in order and returns the first one Real-Debrid

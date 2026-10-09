@@ -126,46 +126,6 @@ func Install(ctx context.Context, client *http.Client, tag string) (string, erro
 	return exe, nil
 }
 
-// SkillDirs returns copies of the stremcli agent skill installed by copying
-// SKILL.md (Codex, or Claude Code before the plugin). Plugin installs are
-// updated by Claude Code itself.
-func SkillDirs() []string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil
-	}
-	var dirs []string
-	for _, d := range []string{".claude/skills/stremcli", ".agents/skills/stremcli"} {
-		dir := filepath.Join(home, d)
-		if _, err := os.Stat(filepath.Join(dir, "SKILL.md")); err == nil {
-			dirs = append(dirs, dir)
-		}
-	}
-	return dirs
-}
-
-// InstallSkill refreshes SKILL.md in dir from the given tag.
-func InstallSkill(ctx context.Context, client *http.Client, tag, dir string) error {
-	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/skills/stremcli/SKILL.md", repo, tag)
-	tmp, err := os.CreateTemp(dir, ".update-*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name())
-	err = download(ctx, client, url, tmp)
-	if cerr := tmp.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil {
-		return err
-	}
-	if err := os.Rename(tmp.Name(), filepath.Join(dir, "SKILL.md")); err != nil {
-		return err
-	}
-	// Older releases installed a helper script the skill no longer uses.
-	return os.RemoveAll(filepath.Join(dir, "scripts"))
-}
-
 func download(ctx context.Context, client *http.Client, url string, w io.Writer) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

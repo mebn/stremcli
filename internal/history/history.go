@@ -3,6 +3,7 @@ package history
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,12 +29,16 @@ type Entry struct {
 	Episode   int        `json:"episode,omitempty"`
 	Player    string     `json:"player,omitempty"`
 	Source    string     `json:"source,omitempty"`
+	// Position and Duration (seconds) are where playback last was and how
+	// long the video is, when the player reports them (IINA, mpv).
+	Position float64 `json:"position,omitempty"`
+	Duration float64 `json:"duration,omitempty"`
 }
 
 // NewEntry builds an entry for title (and ep, if it's a series) watched now.
 func NewEntry(title media.Title, ep *media.Episode, player, source string) Entry {
 	e := Entry{
-		WatchedAt: time.Now(),
+		WatchedAt: time.Now().UTC(),
 		IMDbID:    title.IMDbID,
 		Name:      title.Name,
 		Year:      title.Year,
@@ -55,7 +60,16 @@ func (e Entry) String() string {
 	if e.Kind == media.Series {
 		s += " " + media.Episode{Season: e.Season, Number: e.Episode}.String()
 	}
+	if e.Duration > 0 {
+		s += fmt.Sprintf("  [%s / %s]", formatTime(e.Position), formatTime(e.Duration))
+	}
 	return s
+}
+
+// formatTime renders seconds as h:mm:ss.
+func formatTime(sec float64) string {
+	t := int(sec)
+	return fmt.Sprintf("%d:%02d:%02d", t/3600, t/60%60, t%60)
 }
 
 func path() (string, error) {
@@ -108,4 +122,34 @@ func Load() ([]Entry, error) {
 		}
 	}
 	return entries, sc.Err()
+}
+
+// SetPosition records the playback position of the entry watched at
+// watchedAt.
+func SetPosition(watchedAt time.Time, position, duration float64) error {
+	entries, err := Load()
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	for _, e := range entries {
+		if e.WatchedAt.Equal(watchedAt) {
+			e.Position, e.Duration = position, duration
+		}
+		if err := enc.Encode(e); err != nil {
+			return err
+		}
+	}
+
+	p, err := path()
+	if err != nil {
+		return err
+	}
+	// Write a temp file and rename so readers never see a partial file.
+	tmp := p + ".tmp"
+	if err := os.WriteFile(tmp, buf.Bytes(), 0o600); err != nil {
+		return fmt.Errorf("write history: %w", err)
+	}
+	return os.Rename(tmp, p)
 }

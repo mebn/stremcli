@@ -14,8 +14,6 @@ import (
 type Progress struct {
 	Position float64 // seconds
 	Duration float64 // seconds; 0 if unknown
-	// Ended is true if playback reached the end of the file.
-	Ended bool
 }
 
 // socketWait is how long Track waits for the player to open its socket.
@@ -48,10 +46,9 @@ func Track(ctx context.Context, socket string, onUpdate func(Progress)) (Progres
 	sc := bufio.NewScanner(conn)
 	for sc.Scan() {
 		var msg struct {
-			Event  string   `json:"event"`
-			Name   string   `json:"name"`
-			Data   *float64 `json:"data"`
-			Reason string   `json:"reason"`
+			Event string   `json:"event"`
+			Name  string   `json:"name"`
+			Data  *float64 `json:"data"`
 		}
 		if json.Unmarshal(sc.Bytes(), &msg) != nil {
 			continue
@@ -73,7 +70,6 @@ func Track(ctx context.Context, socket string, onUpdate func(Progress)) (Progres
 			// The player may load something else in the same window
 			// afterwards; that's not ours to track.
 			if loaded {
-				p.Ended = msg.Reason == "eof"
 				return p, nil
 			}
 		}
