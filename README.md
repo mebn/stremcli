@@ -72,6 +72,7 @@ stremcli -q 1080p -pick 3 -p iina "Dune" # play result 3
 stremcli continue                        # next episode of the last show
 stremcli continue -p iina mobland        # next episode of MobLand
 stremcli history                         # what you've watched
+stremcli update                          # update stremcli and its skill
 ```
 
 | Flag | Meaning |

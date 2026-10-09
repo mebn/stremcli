@@ -22,7 +22,7 @@ jobs:
           for target in darwin/arm64 darwin/amd64 linux/amd64 linux/arm64; do
             os="${target%/*}"; arch="${target#*/}"
             CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
-              go build -trimpath -ldflags "-s -w" -o "dist/stremcli-$os-$arch" .
+              go build -trimpath -ldflags "-s -w -X github.com/mebn/stremcli/internal/update.Version=$GITHUB_REF_NAME" -o "dist/stremcli-$os-$arch" .
           done
       - name: Create release
         env:

@@ -64,6 +64,9 @@ Details:
   `cat ~/.stremcli/config.json`. If none is set, ask which player they want,
   or just give them the link.
 - Set a default player with `stremcli config -player iina`.
+- If the user asks to update stremcli, run `stremcli update`. It replaces the
+  binary with the latest release and refreshes this skill; tell them to
+  restart the session to load the new skill.
 - Set a preferred quality with `stremcli config -quality 1080p`. Results in
   that quality are tried first, then the rest. `-quality` on a play command
   overrides it and uses only that quality.

@@ -9,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/mebn/stremcli/internal/update"
 )
 
 const usage = `stremcli - stream movies and TV shows through Real-Debrid
@@ -20,6 +22,8 @@ Usage:
   stremcli continue [flags] [show]  play the next episode of the last show
                                     watched (or of the named show)
   stremcli history [-n N]           show watch history
+  stremcli update [-check]          update to the latest release
+  stremcli version                  print the installed version
 
 Play flags:
   -type, -t     movie or tv (default movie)
@@ -74,6 +78,11 @@ func (a *App) Run(ctx context.Context, args []string) error {
 			return a.runContinue(ctx, args[1:])
 		case trackCommand:
 			return a.runTrack(ctx, args[1:])
+		case "update":
+			return a.runUpdate(ctx, args[1:])
+		case "version", "-version", "--version":
+			fmt.Fprintln(a.Out, "stremcli", update.Current())
+			return nil
 		case "history":
 			return a.runHistory(args[1:])
 		case "help", "-h", "-help", "--help":
