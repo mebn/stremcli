@@ -68,6 +68,22 @@ func FilterQuality(streams []Stream, quality string) []Stream {
 	return out
 }
 
+// PreferQuality returns streams with those matching quality moved to the
+// front, keeping the original order within each group.
+func PreferQuality(streams []Stream, quality string) []Stream {
+	quality = NormalizeQuality(quality)
+	out := make([]Stream, 0, len(streams))
+	var rest []Stream
+	for _, s := range streams {
+		if s.Quality == quality {
+			out = append(out, s)
+		} else {
+			rest = append(rest, s)
+		}
+	}
+	return append(out, rest...)
+}
+
 // parseQuality extracts the resolution from a stream name such as
 // "Torrentio\n4k HDR".
 func parseQuality(name string) string {

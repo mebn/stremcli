@@ -20,6 +20,9 @@ type Config struct {
 	RealDebridToken string `json:"real_debrid_token,omitempty"`
 	// Player is used when no -player flag is given.
 	Player string `json:"player,omitempty"`
+	// Quality is tried first when no -quality flag is given; other
+	// qualities are still used as fallbacks.
+	Quality string `json:"quality,omitempty"`
 }
 
 // Dir returns the stremcli data directory (~/.stremcli).

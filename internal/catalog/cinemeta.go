@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
+	"time"
 
 	"github.com/mebn/stremcli/internal/httpx"
 	"github.com/mebn/stremcli/internal/media"
@@ -64,4 +66,40 @@ func (c *Client) Search(ctx context.Context, kind media.Kind, query string) (med
 		return media.Title{IMDbID: id, Name: m.Name, Year: m.ReleaseInfo, Kind: kind}, nil
 	}
 	return media.Title{}, fmt.Errorf("%w: %q", ErrNotFound, query)
+}
+
+type metaResponse struct {
+	Meta struct {
+		Videos []struct {
+			Season   int       `json:"season"`
+			Episode  int       `json:"episode"`
+			Released time.Time `json:"released"`
+		} `json:"videos"`
+	} `json:"meta"`
+}
+
+// Episodes returns the aired episodes of a series in order, leaving out
+// specials (season 0).
+func (c *Client) Episodes(ctx context.Context, imdbID string) ([]media.Episode, error) {
+	endpoint := fmt.Sprintf("%s/meta/series/%s.json", c.BaseURL, url.PathEscape(imdbID))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var res metaResponse
+	if err := httpx.Do(c.HTTP, req, &res); err != nil {
+		return nil, fmt.Errorf("fetch episodes: %w", err)
+	}
+
+	now := time.Now()
+	var eps []media.Episode
+	for _, v := range res.Meta.Videos {
+		if v.Season < 1 || v.Episode < 1 || v.Released.IsZero() || v.Released.After(now) {
+			continue
+		}
+		eps = append(eps, media.Episode{Season: v.Season, Number: v.Episode})
+	}
+	slices.SortFunc(eps, media.Episode.Compare)
+	return slices.Compact(eps), nil
 }

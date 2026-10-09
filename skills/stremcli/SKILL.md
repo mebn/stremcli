@@ -1,6 +1,6 @@
 ---
 name: stremcli
-description: Stream a movie or TV episode through Real-Debrid and open it in IINA, VLC or mpv using the stremcli command-line tool. Use when the user wants to watch, play or stream a movie or show, get a direct streaming link for a title, pick a torrent by quality, or see what they have watched recently.
+description: Stream a movie or TV episode through Real-Debrid and open it in IINA, VLC or mpv using the stremcli command-line tool. Use when the user wants to watch, play or stream a movie or show, get a direct streaming link for a title, pick a torrent by quality, continue watching a show (play the next episode), or see what they have watched recently.
 ---
 
 # stremcli
@@ -64,6 +64,9 @@ Details:
   `cat ~/.stremcli/config.json`. If none is set, ask which player they want,
   or just give them the link.
 - Set a default player with `stremcli config -player iina`.
+- Set a preferred quality with `stremcli config -quality 1080p`. Results in
+  that quality are tried first, then the rest. `-quality` on a play command
+  overrides it and uses only that quality.
 
 ## History
 
@@ -74,5 +77,22 @@ stremcli history        # last 20
 stremcli history -n 0   # everything
 ```
 
-Use this to answer questions like "what did I watch last?" or to continue a
-show with the next episode. Raw data is in `~/.stremcli/history.jsonl`.
+Use this to answer questions like "what did I watch last?". Raw data is in
+`~/.stremcli/history.jsonl`.
+
+## Continue watching
+
+When the user says "continue watching" or asks for the next episode, run:
+
+```sh
+stremcli continue            # next episode of the most recently watched show
+stremcli continue mobland    # next episode of a specific show in history
+```
+
+It takes the same `-player`, `-quality`, `-list` and `-pick` flags as a play
+command, rolls over to the next season, and says so if the user is caught up.
+
+With IINA or mpv, stremcli records how far the user got. `continue` resumes a
+half-watched episode instead of skipping it, and replaying a movie or episode
+resumes where it stopped. `stremcli history` shows `[12:34 / 45:00]` or
+`[finished]` next to tracked entries.

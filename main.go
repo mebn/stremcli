@@ -20,6 +20,9 @@ func main() {
 		if errors.Is(err, flag.ErrHelp) {
 			return
 		}
+		if errors.Is(err, context.Canceled) {
+			os.Exit(130) // interrupted with Ctrl-C
+		}
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}

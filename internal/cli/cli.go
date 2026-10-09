@@ -15,8 +15,10 @@ const usage = `stremcli - stream movies and TV shows through Real-Debrid
 
 Usage:
   stremcli [flags] <title>          find a stream and play it
-  stremcli config [-token KEY] [-player NAME]
+  stremcli config [-token KEY] [-player NAME] [-quality Q]
                                     save settings to ~/.stremcli/config.json
+  stremcli continue [flags] [show]  play the next episode of the last show
+                                    watched (or of the named show)
   stremcli history [-n N]           show watch history
 
 Play flags:
@@ -25,6 +27,7 @@ Play flags:
   -episode, -e  episode number (tv only)
   -player, -p   iina, vlc or mpv (default from config; prints the link if unset)
   -quality, -q  only use results of this quality: 4k, 1080p, 720p or 480p
+                (without it, the configured quality is tried first)
   -list, -l     list numbered results instead of playing
   -pick N       use result number N from -list (no fallback to other results)
 
@@ -37,6 +40,8 @@ Examples:
   stremcli -t tv -s 1 -e 3 -p vlc "Breaking Bad"
   stremcli -q 1080p -l "Dune"
   stremcli -q 1080p -pick 2 -p iina "Dune"
+  stremcli continue
+  stremcli continue mobland
 `
 
 // App holds the I/O streams and shared dependencies for commands.
@@ -45,6 +50,8 @@ type App struct {
 	Out  io.Writer // results (e.g. the stream link)
 	Err  io.Writer // progress and diagnostics
 	HTTP *http.Client
+
+	lines chan readResult // lazily started reader of In, see prompt
 }
 
 // New returns an App using the given streams.
@@ -62,7 +69,11 @@ func (a *App) Run(ctx context.Context, args []string) error {
 	if len(args) > 0 {
 		switch args[0] {
 		case "config":
-			return a.runConfig(args[1:])
+			return a.runConfig(ctx, args[1:])
+		case "continue":
+			return a.runContinue(ctx, args[1:])
+		case trackCommand:
+			return a.runTrack(ctx, args[1:])
 		case "history":
 			return a.runHistory(args[1:])
 		case "help", "-h", "-help", "--help":

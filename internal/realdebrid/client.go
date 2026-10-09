@@ -55,6 +55,21 @@ type TorrentInfo struct {
 	Links    []string `json:"links"`
 }
 
+// User describes the account that owns the API token.
+type User struct {
+	Username   string `json:"username"`
+	Type       string `json:"type"` // "premium" or "free"
+	Expiration string `json:"expiration"`
+}
+
+// User returns the account the token belongs to. It doubles as a cheap way
+// to check that a token is valid.
+func (c *Client) User(ctx context.Context) (User, error) {
+	var u User
+	err := c.do(ctx, http.MethodGet, "/user", nil, &u)
+	return u, err
+}
+
 // AddMagnet adds a magnet link and returns the new torrent ID.
 func (c *Client) AddMagnet(ctx context.Context, magnet string) (string, error) {
 	var res struct {

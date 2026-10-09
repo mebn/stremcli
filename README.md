@@ -44,6 +44,7 @@ Once, with your API key from https://real-debrid.com/apitoken:
 ```sh
 stremcli config -token <KEY>
 stremcli config -player iina   # optional default player
+stremcli config -quality 1080p # optional preferred quality
 ```
 
 Running `stremcli config` with no flags asks for the key interactively.
@@ -68,6 +69,8 @@ stremcli -p iina "The Matrix"
 stremcli -t tv -s 1 -e 3 -p vlc "Breaking Bad"
 stremcli -q 1080p -l "Dune"              # list numbered results
 stremcli -q 1080p -pick 3 -p iina "Dune" # play result 3
+stremcli continue                        # next episode of the last show
+stremcli continue -p iina mobland        # next episode of MobLand
 stremcli history                         # what you've watched
 ```
 
@@ -83,5 +86,11 @@ stremcli history                         # what you've watched
 The link is printed to stdout, so `stremcli "Dune" | pbcopy` works too.
 `$REAL_DEBRID_TOKEN` overrides the saved token.
 
-Settings live in `~/.stremcli/config.json` and watch history in
-`~/.stremcli/history.jsonl`.
+With IINA or mpv, stremcli remembers how far you got: playing the same movie
+or episode again resumes there, and `stremcli continue` picks up a
+half-watched episode before moving on to the next one. (VLC can't report its
+position, so episodes played in VLC count as watched.)
+
+Settings live in `~/.stremcli/config.json`, watch history in
+`~/.stremcli/history.jsonl` and playback positions in
+`~/.stremcli/progress.json`.
