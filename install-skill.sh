@@ -22,7 +22,16 @@ install_to() {
 install_to "$HOME/.claude/skills"
 install_to "$HOME/.agents/skills"
 
-sh "$HOME/.claude/skills/stremcli/scripts/ensure-installed.sh" >/dev/null
+bin="$(sh "$HOME/.claude/skills/stremcli/scripts/ensure-installed.sh")"
+bin_dir="$(dirname "$bin")"
+case ":$PATH:" in
+	*":$bin_dir:"*) ;;
+	*)
+		echo
+		echo "Note: $bin_dir is not on your PATH. Add it to use stremcli directly:"
+		echo "  echo 'export PATH=\"$bin_dir:\$PATH\"' >> ~/.zshrc"
+		;;
+esac
 
 echo
 echo "Done. Save your Real-Debrid token (https://real-debrid.com/apitoken) with:"

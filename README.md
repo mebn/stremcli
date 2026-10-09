@@ -9,18 +9,57 @@ to the first one that's cached.
 
 ## Install
 
+### With Claude Code or Codex (easiest)
+
+Tell your agent:
+
+> install https://github.com/mebn/stremcli
+
+It installs both the `stremcli` CLI and the stremcli skill, so afterwards you
+can just say things like "play Dune in 1080p in IINA" or "play the next
+episode of The Office".
+
+### Manually
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/mebn/stremcli/main/install-skill.sh | sh
+```
+
+This installs the skill into `~/.claude/skills/stremcli` (Claude Code) and
+`~/.agents/skills/stremcli` (Codex), and the CLI via `go install` or, without
+Go, a prebuilt binary in `~/.local/bin`.
+
+Only want the CLI?
+
 ```sh
 go install github.com/mebn/stremcli@latest
 ```
 
 or download a binary from the [latest release](https://github.com/mebn/stremcli/releases/latest).
 
-Then save your Real-Debrid API token (from https://real-debrid.com/apitoken) once:
+### Set your Real-Debrid key
+
+Once, with your API key from https://real-debrid.com/apitoken:
 
 ```sh
 stremcli config -token <KEY>
 stremcli config -player iina   # optional default player
 ```
+
+Running `stremcli config` with no flags asks for the key interactively.
+
+### Instructions for AI agents
+
+If a user asks you to install this repository:
+
+1. Run `curl -fsSL https://raw.githubusercontent.com/mebn/stremcli/main/install-skill.sh | sh`.
+   It installs the skill for both Claude Code and Codex and installs the
+   `stremcli` binary. Report any PATH note it prints to the user.
+2. Ask the user for their Real-Debrid API key (from
+   https://real-debrid.com/apitoken) and save it with
+   `stremcli config -token <KEY>`. Never run `stremcli config` without
+   `-token`, because it waits for input on stdin.
+3. Tell the user to restart their session so the new skill is loaded.
 
 ## Usage
 
@@ -46,16 +85,3 @@ The link is printed to stdout, so `stremcli "Dune" | pbcopy` works too.
 
 Settings live in `~/.stremcli/config.json` and watch history in
 `~/.stremcli/history.jsonl`.
-
-## Claude Code / Codex skill
-
-Let Claude Code or Codex play things for you ("play the next episode of The
-Office in IINA"):
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/mebn/stremcli/main/install-skill.sh | sh
-```
-
-This installs the skill into `~/.claude/skills/stremcli` and
-`~/.agents/skills/stremcli`, and installs the `stremcli` binary. The skill
-also installs the binary on first use if it's missing.
