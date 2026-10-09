@@ -1,0 +1,15 @@
+{
+  "name": "stremcli",
+  "description": "Stream movies and TV through Real-Debrid from Claude Code",
+  "owner": {
+    "name": "Marcus Nilszén",
+    "url": "https://github.com/mebn"
+  },
+  "plugins": [
+    {
+      "name": "stremcli",
+      "source": "./",
+      "description": "Find, stream and continue watching movies and TV shows through Real-Debrid in IINA, VLC or mpv"
+    }
+  ]
+}

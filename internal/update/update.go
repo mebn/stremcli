@@ -126,10 +126,9 @@ func Install(ctx context.Context, client *http.Client, tag string) (string, erro
 	return exe, nil
 }
 
-// SkillFiles are the skill's files, relative to the skill directory.
-var SkillFiles = []string{"SKILL.md", "scripts/ensure-installed.sh"}
-
-// SkillDirs returns the installed copies of the stremcli agent skill.
+// SkillDirs returns copies of the stremcli agent skill installed by copying
+// SKILL.md (Codex, or Claude Code before the plugin). Plugin installs are
+// updated by Claude Code itself.
 func SkillDirs() []string {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -145,34 +144,26 @@ func SkillDirs() []string {
 	return dirs
 }
 
-// InstallSkill refreshes the skill files in dir from the given tag.
+// InstallSkill refreshes SKILL.md in dir from the given tag.
 func InstallSkill(ctx context.Context, client *http.Client, tag, dir string) error {
-	for _, f := range SkillFiles {
-		url := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/skills/stremcli/%s", repo, tag, f)
-		dest := filepath.Join(dir, f)
-		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
-			return err
-		}
-		tmp, err := os.CreateTemp(filepath.Dir(dest), ".update-*")
-		if err != nil {
-			return err
-		}
-		err = download(ctx, client, url, tmp)
-		if cerr := tmp.Close(); err == nil {
-			err = cerr
-		}
-		if err == nil && strings.HasSuffix(f, ".sh") {
-			err = os.Chmod(tmp.Name(), 0o755)
-		}
-		if err == nil {
-			err = os.Rename(tmp.Name(), dest)
-		}
-		if err != nil {
-			os.Remove(tmp.Name())
-			return err
-		}
+	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/skills/stremcli/SKILL.md", repo, tag)
+	tmp, err := os.CreateTemp(dir, ".update-*")
+	if err != nil {
+		return err
 	}
-	return nil
+	defer os.Remove(tmp.Name())
+	err = download(ctx, client, url, tmp)
+	if cerr := tmp.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return err
+	}
+	if err := os.Rename(tmp.Name(), filepath.Join(dir, "SKILL.md")); err != nil {
+		return err
+	}
+	// Older releases installed a helper script the skill no longer uses.
+	return os.RemoveAll(filepath.Join(dir, "scripts"))
 }
 
 func download(ctx context.Context, client *http.Client, url string, w io.Writer) error {

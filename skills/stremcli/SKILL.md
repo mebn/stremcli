@@ -11,15 +11,26 @@ in a media player. Source: https://github.com/mebn/stremcli
 
 ## 1. Make sure it's installed
 
-Always run this first. It installs stremcli if needed, then prints the binary's
-absolute path:
+Always check first:
 
 ```sh
-sh "<this skill's directory>/scripts/ensure-installed.sh"
+command -v stremcli || ls ~/.local/bin/stremcli
 ```
 
-Use the printed path to run stremcli (it may not be on `PATH`). Below,
-`stremcli` means that path.
+If neither finds it, download the latest release binary from GitHub into
+`~/.local/bin`. Releases exist for macOS and Linux on amd64 and arm64:
+
+```sh
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+case "$(uname -m)" in x86_64|amd64) arch=amd64 ;; arm64|aarch64) arch=arm64 ;; esac
+mkdir -p ~/.local/bin
+curl -fsSL "https://github.com/mebn/stremcli/releases/latest/download/stremcli-$os-$arch" -o ~/.local/bin/stremcli
+chmod +x ~/.local/bin/stremcli
+```
+
+If `~/.local/bin` isn't on `PATH`, run it as `~/.local/bin/stremcli` and tell
+the user they can add `export PATH="$HOME/.local/bin:$PATH"` to their shell
+profile. Below, `stremcli` means whichever path works.
 
 ## 2. Make sure a Real-Debrid token is set
 
@@ -65,8 +76,9 @@ Details:
   or just give them the link.
 - Set a default player with `stremcli config -player iina`.
 - If the user asks to update stremcli, run `stremcli update`. It replaces the
-  binary with the latest release and refreshes this skill; tell them to
-  restart the session to load the new skill.
+  binary with the latest release. In Claude Code, this skill is updated
+  through the plugin: `claude plugin marketplace update stremcli`, then
+  restart the session.
 - Set a preferred quality with `stremcli config -quality 1080p`. Results in
   that quality are tried first, then the rest. `-quality` on a play command
   overrides it and uses only that quality.

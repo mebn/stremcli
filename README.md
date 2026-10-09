@@ -9,33 +9,38 @@ to the first one that's cached.
 
 ## Install
 
-### With Claude Code or Codex (easiest)
+### Claude Code
 
-Tell your agent:
+Install the plugin, which adds the stremcli skill:
 
-> install https://github.com/mebn/stremcli
-
-It installs both the `stremcli` CLI and the stremcli skill, so afterwards you
-can just say things like "play Dune in 1080p in IINA" or "play the next
-episode of The Office".
-
-### Manually
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/mebn/stremcli/main/install-skill.sh | sh
+```
+/plugin marketplace add mebn/stremcli
+/plugin install stremcli@stremcli
 ```
 
-This installs the skill into `~/.claude/skills/stremcli` (Claude Code) and
-`~/.agents/skills/stremcli` (Codex), and the CLI via `go install` or, without
-Go, a prebuilt binary in `~/.local/bin`.
+The skill downloads the `stremcli` CLI the first time it's needed. Afterwards
+you can just say things like "play Dune in 1080p in IINA" or "continue
+watching". Get skill updates with `/plugin marketplace update stremcli`, or
+turn on auto-update for the marketplace under **Marketplaces** in `/plugin`.
 
-Only want the CLI?
+### Codex
+
+Copy the skill into your skills folder:
+
+```sh
+mkdir -p ~/.agents/skills/stremcli
+curl -fsSL https://raw.githubusercontent.com/mebn/stremcli/main/skills/stremcli/SKILL.md \
+  -o ~/.agents/skills/stremcli/SKILL.md
+```
+
+### CLI only
 
 ```sh
 go install github.com/mebn/stremcli@latest
 ```
 
 or download a binary from the [latest release](https://github.com/mebn/stremcli/releases/latest).
+Update later with `stremcli update`.
 
 ### Set your Real-Debrid key
 
@@ -53,14 +58,16 @@ Running `stremcli config` with no flags asks for the key interactively.
 
 If a user asks you to install this repository:
 
-1. Run `curl -fsSL https://raw.githubusercontent.com/mebn/stremcli/main/install-skill.sh | sh`.
-   It installs the skill for both Claude Code and Codex and installs the
-   `stremcli` binary. Report any PATH note it prints to the user.
-2. Ask the user for their Real-Debrid API key (from
+1. In Claude Code, run
+   `claude plugin marketplace add mebn/stremcli && claude plugin install stremcli@stremcli`.
+   In Codex, copy the skill as shown under [Codex](#codex).
+2. Install the CLI by following "Make sure it's installed" in
+   [the skill](skills/stremcli/SKILL.md).
+3. Ask the user for their Real-Debrid API key (from
    https://real-debrid.com/apitoken) and save it with
    `stremcli config -token <KEY>`. Never run `stremcli config` without
    `-token`, because it waits for input on stdin.
-3. Tell the user to restart their session so the new skill is loaded.
+4. Tell the user to restart their session so the new skill is loaded.
 
 ## Usage
 

@@ -1,0 +1,11 @@
+{
+  "name": "stremcli",
+  "description": "Find, stream and continue watching movies and TV shows through Real-Debrid in IINA, VLC or mpv",
+  "author": {
+    "name": "Marcus Nilszén",
+    "url": "https://github.com/mebn"
+  },
+  "homepage": "https://github.com/mebn/stremcli",
+  "repository": "https://github.com/mebn/stremcli",
+  "keywords": ["real-debrid", "streaming", "iina", "mpv", "vlc"]
+}
